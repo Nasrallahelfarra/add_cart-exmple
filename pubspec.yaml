@@ -24,6 +24,7 @@ dependencies:
   get: ^4.3.5
   cached_network_image:
   flutter_svg: ^0.22.0
+  stacked: ^2.2.3
 
   flutter:
     sdk: flutter

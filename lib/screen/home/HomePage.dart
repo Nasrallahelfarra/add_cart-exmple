@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:stacked/stacked.dart';
 import 'package:test_task/component/CustomeText.dart';
 import 'package:test_task/controller/cart_controller.dart';
 import 'package:test_task/data/model/product.dart';
@@ -23,15 +24,11 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final CartControllerx = Get.put(CartController());
+  final CartControllerx =CartController();
   int selectDrinks=-1;
   @override
   void initState() {
-    WidgetsBinding.instance!.addPostFrameCallback((_) {
-      addDataFack();
-
-      setState(() {});
-    });
+   
     // TODO: implement initState
     super.initState();
   }
@@ -44,55 +41,64 @@ class _HomePageState extends State<HomePage> {
       child: Scaffold(
         body: Container(
             height: SizeConfig.screenHeight,
-            child: Column(
-              children: [Expanded(child: ListViewProduct()), FooterHome()],
+            child: ViewModelBuilder<CartController>.reactive(
+                viewModelBuilder: () => CartController(),
+                onModelReady: (viewModel) => viewModel.initialise(),
+
+                builder: (context, viewModel, child){
+                return Column(
+                  children: [Expanded(child: ListViewProduct(viewModel)), FooterHome(viewModel)],
+                );
+              }
             )),
       ),
     );
   }
 
-  Widget ListViewProduct() {
+  Widget ListViewProduct(CartController viewModel) {
     return SingleChildScrollView(
-      child: Obx(() {
-        return ListView.builder(
-            itemCount: CartControllerx.listProduct.length,
-            shrinkWrap: true,
-            padding: EdgeInsets.only(top: 0),
-            itemBuilder: (context, index) {
-              return Column(
-                children: [
-                  GestureDetector(
-                    onTap: (){
-                      int locationProduct=CartControllerx.cheackCart(CartControllerx.listProduct[index]);
-                      if(locationProduct==-1){
-                        addDataFack();
-                        selectDrinks=-1;
-                        showdiloge(CartControllerx.listProduct[index]);
+      child: ListView.builder(
+                itemCount: viewModel.listProduct.length,
+                shrinkWrap: true,
+                padding: EdgeInsets.only(top: 0),
+                itemBuilder: (context, index) {
+                  return Column(
+                    children: [
+                      GestureDetector(
+                        onTap: (){
+                          int locationProduct=viewModel.cheackCart(viewModel.listProduct[index]);
+                          print("locationProduct $locationProduct");
 
-                      }else{
-                        addDataFack();
-                        print(CartControllerx.listCart.value[locationProduct].product!.quntity);
-                        CartControllerx.listProduct.removeAt(index);
-                        CartControllerx.listProduct.insert(index, CartControllerx.listCart.value[locationProduct].product!);
-                        selectDrinks=-1;
-                        getSelectIndexDrinks(CartControllerx.listProduct[index]);
+                          if(locationProduct==-1){
+                            viewModel.addDataFack();
+                            selectDrinks=-1;
+                            showdiloge(viewModel.listProduct[index],viewModel);
 
-                        showdiloge(CartControllerx.listProduct[index]);
+                          }else{
+                            viewModel.addDataFack();
+                            viewModel.listProduct.removeAt(index);
+                            viewModel.listProduct.insert(index, viewModel.listCart[locationProduct].product!);
+                            selectDrinks=-1;
+                            getSelectIndexDrinks(viewModel.listProduct[index]);
 
-                      }
+                            showdiloge(viewModel.listProduct[index],viewModel);
 
-                    },
-                    child: ItemProduct(
-                      product: CartControllerx.listProduct[index],
-                    ),
-                  ),
-                  SizedBox(
-                    height: 5,
-                  ),
-                ],
-              );
-            });
-      }),
+                          }
+
+                        },
+                        child: ItemProduct(
+                          product: viewModel.listProduct[index],
+                        ),
+                      ),
+                      SizedBox(
+                        height: 5,
+                      ),
+                    ],
+                  );
+
+
+        }
+      ),
     );
   }
   /*showdiloge(Product product) {
@@ -117,20 +123,19 @@ class _HomePageState extends State<HomePage> {
     );
   }*/
 
-  showdiloge(Product product) {
+  showdiloge(Product product,CartController cartControllerx) {
     showModalBottomSheet<void>(
       enableDrag: true,
       isScrollControlled: true,
 
       context: context,
       builder: (BuildContext context) {
-        return ShowdilogeProduct(product);
+        return ShowdilogeProduct(product,cartControllerx);
       },
     );
   }
-  Widget ShowdilogeProduct(Product product) {
-    getTotal(product);
-
+  Widget ShowdilogeProduct(Product product,CartController cartControllerx) {
+    cartControllerx.getTotalProduct(product);
     return SafeArea(
       child: Material(
         child: Container(
@@ -138,99 +143,106 @@ class _HomePageState extends State<HomePage> {
           margin: EdgeInsets.only(left: 20,right: 20,bottom: 20,top: 50),
           child: StatefulBuilder(
               builder: (BuildContext context, StateSetter mystate) {
-                return Container(
-                  padding: EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                  //height:(type == 8 && _myKitchenController.myKitchen.value.menus.length <5)?SizeConfig.screenHeight * 0.40:(type == 5 && ListServingType.length <7)?SizeConfig.screenHeight * 0.52: SizeConfig.screenHeight * 0.6,
-                  child: Column(
-                    children: [
-                      Expanded(
-                        child: SingleChildScrollView(
-                          child: Column(
-                              mainAxisAlignment: MainAxisAlignment.start,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
+                return ViewModelBuilder<CartController>.reactive(
+                    viewModelBuilder: () => CartController(),
+                    onModelReady: (viewModel) => viewModel.initialiseTotalProduct(product),
 
-                                SizedBox(
-                                  height: 20,
-                                ),
-                                HederDiloge(product:product ,pressPluse: (){
-                                  print("pluse");
-                                  product.quntity=product.quntity+1;
-                                  mystate(() {
-                                    getTotal(product);
-
-                                  });
-                                },pressMin: (){
-                                  if( product.quntity==1){
-
-                                  }else{
-                                    product.quntity=product.quntity-1;
-                                    mystate(() {
-                                      getTotal(product);
-
-                                    });
-                                  }
-                                },),
-                                HeaderList(title: "Sides",numberSelect: 2,),
-                                SizedBox(
-                                  height: 10,
-                                ),
-                                ListSides(mystate,product),
-                                SizedBox(
-                                  height: 10,
-                                ),
-                                HeaderList(title: "Drinks",numberSelect: 1,),
-                                SizedBox(
-                                  height: 10,
-                                ),
-                                ListDrinks(mystate,product),
-                                SizedBox(
-                                  height: 10,
-                                ),
-
-
-                                /*Padding(
-                                  padding: const EdgeInsets.all(10),
-                                  child: ReoundButtom(
-                                    title: kSave,
-                                    press: (){
-
-                                      Get.back();
-                                    },
-                                  ),
-                                )*/
-                              ]),
-                        ),
+                    builder: (context, viewModel, child) {
+                    return Container(
+                      padding: EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(15),
                       ),
-                      Padding(
-                        padding: const EdgeInsets.only(left: 10, right: 10),
-                        child: SizedBox(
-                            height: getProportionateScreenWidth(30),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                totalDiloge(),
-                                GestureDetector(
-                                    onTap: (){
-                                      if(selectDrinks!=-1){
-                                        product.listDrinck![selectDrinks].select=true;
+                      //height:(type == 8 && _myKitchenController.myKitchen.value.menus.length <5)?SizeConfig.screenHeight * 0.40:(type == 5 && ListServingType.length <7)?SizeConfig.screenHeight * 0.52: SizeConfig.screenHeight * 0.6,
+                      child: Column(
+                        children: [
+                          Expanded(
+                            child: SingleChildScrollView(
+                              child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
 
+                                    SizedBox(
+                                      height: 20,
+                                    ),
+                                    HederDiloge(product:product ,pressPluse: (){
+                                      print("pluse");
+                                      product.quntity=product.quntity+1;
+                                      mystate(() {
+                                        cartControllerx.getTotalProduct(product);
+
+                                      });
+                                    },pressMin: (){
+                                      if( product.quntity==1){
+
+                                      }else{
+                                        product.quntity=product.quntity-1;
+                                        mystate(() {
+                                          cartControllerx.getTotalProduct(product);
+
+                                        });
                                       }
-                                      CartControllerx.addToCart(product);
+                                    },),
+                                    HeaderList(title: "Sides",numberSelect: 2,),
+                                    SizedBox(
+                                      height: 10,
+                                    ),
+                                    ListSides(mystate,product,cartControllerx),
+                                    SizedBox(
+                                      height: 10,
+                                    ),
+                                    HeaderList(title: "Drinks",numberSelect: 1,),
+                                    SizedBox(
+                                      height: 10,
+                                    ),
+                                    ListDrinks(mystate,product),
+                                    SizedBox(
+                                      height: 10,
+                                    ),
 
-                                      Get.back();
-                                    },
-                                    child: buttomDiloge(title: "Add to Basket",color: kColorButtom))
-                              ],
-                            )),
-                      )
-                    ],
-                  ),
+
+                                    /*Padding(
+                                      padding: const EdgeInsets.all(10),
+                                      child: ReoundButtom(
+                                        title: kSave,
+                                        press: (){
+
+                                          Get.back();
+                                        },
+                                      ),
+                                    )*/
+                                  ]),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.only(left: 10, right: 10),
+                            child: SizedBox(
+                                height: getProportionateScreenWidth(30),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    totalDiloge( cartControllerx),
+                                    GestureDetector(
+                                        onTap: (){
+                                          if(selectDrinks!=-1){
+                                            product.listDrinck![selectDrinks].select=true;
+
+                                          }
+                                          cartControllerx.addToCart(product);
+
+                                          Get.back();
+                                        },
+                                        child: buttomDiloge(title: "Add to Basket",color: kColorButtom))
+                                  ],
+                                )),
+                          )
+                        ],
+                      ),
+                    );
+                  }
                 );
               }),
         ),
@@ -266,9 +278,8 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
-  Widget totalDiloge(){
-    return  Obx(
-      () {
+  Widget totalDiloge(CartController cartControllerx){
+
         return ClipRRect(
           borderRadius: BorderRadius.all(Radius.circular(20)),
           child: Container(
@@ -281,7 +292,7 @@ class _HomePageState extends State<HomePage> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 CustomeText(
-                    title: "${CartControllerx.totalPriceOnlyProduct.value}",
+                    title: "${ cartControllerx.totalPriceOnlyProduct}",
                     fontSize: fontSize12,
                     fontFamily: Font_poppins_regular,
                     color: Colors.white,
@@ -298,13 +309,12 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
           ),
-        );
-      }
+
+
     );
   }
-  Widget FooterHome() {
-    return Obx(
-      () {
+  Widget FooterHome(CartController cartControllerx) {
+
         return Row(
           children: [
             SizedBox(
@@ -331,7 +341,7 @@ class _HomePageState extends State<HomePage> {
                         mainAxisAlignment: MainAxisAlignment.start,
                         children: [
                           CustomeText(
-                              title: "${CartControllerx.totalPrice.value}",
+                              title: "${cartControllerx.totalPrice}",
                               fontSize: fontSize12,
                               fontFamily: Font_poppins_regular,
                               color: Colors.white,
@@ -353,11 +363,11 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
           ],
-        );
-      }
+
+
     );
   }
-  Widget ListSides(StateSetter mystate,Product product) {
+  Widget ListSides(StateSetter mystate,Product product,CartController CartControllerx) {
     return ListView.builder(
       shrinkWrap: true,
       physics: NeverScrollableScrollPhysics(),
@@ -373,13 +383,13 @@ class _HomePageState extends State<HomePage> {
               }else{
                 product.listSides![postion].quntity=product.listSides![postion].quntity-1;
                 mystate(() {
-                  getTotal(product);
+                  CartControllerx.getTotalProduct(product);
 
                 });
                 if(product.listSides![postion].quntity==0){
                   product.listSides![postion].select=false;
                   mystate(() {
-                    getTotal(product);
+                    CartControllerx.getTotalProduct(product);
 
                   });
                 }
@@ -392,7 +402,7 @@ class _HomePageState extends State<HomePage> {
                  product.listSides![postion].quntity=product.listSides![postion].quntity+1;
                  product.listSides![postion].select=true;
                  mystate(() {
-                   getTotal(product);
+                   CartControllerx.getTotalProduct(product);
 
                  });
                }else{
@@ -400,7 +410,7 @@ class _HomePageState extends State<HomePage> {
                    product.listSides![postion].quntity=product.listSides![postion].quntity+1;
                    product.listSides![postion].select=true;
                    mystate(() {
-                     getTotal(product);
+                     CartControllerx.getTotalProduct(product);
 
                    });
                  }else{
@@ -451,27 +461,6 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  pressMinHeader(StateSetter mystate,Product product){
-    if( product.quntity==1){
-
-    }else{
-      product.quntity=product.quntity-1;
-        mystate(() {
-          getTotal(product);
-
-        });
-      }
-    }
-
-
-  pressPluseHeader(StateSetter mystate,Product product){
-    print("pluse");
-    product.quntity=product.quntity+1;
-    mystate(() {
-      getTotal(product);
-
-    });
-  }
   int cheackNumberSelect(Product product){
     int index=0;
     for(int i=0;i<product.listSides!.length;i++){
@@ -484,81 +473,7 @@ class _HomePageState extends State<HomePage> {
     return index;
   }
 
-  getTotal(Product  product){
-    CartControllerx.totalPriceOnlyProduct.value=0.0;
-    double price=product.price;
-    CartControllerx.totalPriceOnlyProduct.value=product.quntity*price;
-    CartControllerx.totalPriceOnlyProduct.value=CartControllerx.totalPriceOnlyProduct.value+getTolalSideSelect(product);
-  }
-  double getTolalSideSelect(Product  product){
-    double priceTotal=0.0;
-    for(int i=0;i<product.listSides!.length;i++){
-      if(product.listSides![i].select){
-        double price=product.listSides![i].price;
-        priceTotal=(priceTotal+(product.listSides![i].quntity*price));
+ 
 
-      }
 
-    }
-    return priceTotal;
-  }
-  addDataFack() {
-    CartControllerx.listProduct.clear();
-    Product mProduct = Product(
-        title: "product1",
-        id: 1,
-        price: 4.5,
-        desc: ". Check the docs for your editor to learn more 1",
-        image:
-            "https://purewows3.imgix.net/images/articles/2020_12/LittleBeetTable_healthy-restaurants-nyc.jpg?auto=format,compress&cs=strip",
-        listSides: getSides(),
-        listDrinck: getDrinck());
-
-    Product mProduct2 = Product(
-        title: "product2",
-        id: 2,
-        price: 3.5,
-        desc: ". Check the docs for your editor to learn more 2",
-        image:
-            "https://awol.junkee.com/wp-content/uploads/2019/11/30624445_2031384813783830_665928700650323968_n-copy.jpg",
-        listSides: getSides(),
-        listDrinck: getDrinck());
-    CartControllerx.listProduct.add(mProduct);
-    CartControllerx.listProduct.add(mProduct2);
-  }
-
-  List<Drinck> getDrinck() {
-    List<Drinck> listDrinck = [];
-    Drinck drinck1 = Drinck(title: 'pebsi', price: 0.00, id: 1);
-    Drinck drinck2 = Drinck(title: 'cola', price: 0.50, id: 2);
-    Drinck drinck3 = Drinck(title: 'marinda', price: 0.25, id: 3);
-    Drinck drinck4 = Drinck(title: 'pebsi4', price: 0.75, id: 4);
-    Drinck drinck5 = Drinck(title: 'pebsi5', price: 0.00, id: 5);
-    Drinck drinck6 = Drinck(title: 'cola', price: 1.00, id: 6);
-    listDrinck.add(drinck1);
-    listDrinck.add(drinck2);
-    listDrinck.add(drinck3);
-    listDrinck.add(drinck4);
-    listDrinck.add(drinck5);
-    listDrinck.add(drinck6);
-
-    return listDrinck;
-  }
-
-  List<Sides> getSides() {
-    List<Sides> listSides = [];
-    Sides sides1 = Sides(title: 'smal', price: 0.00, id: 1);
-    Sides sides2 = Sides(title: 'large', price: 0.50, id: 2);
-    Sides sides3 = Sides(title: 'f smal', price: 0.25, id: 3);
-    Sides sides4 = Sides(title: 'f large', price: 0.75, id: 4);
-    Sides sides5 = Sides(title: 'Clorwew', price: 0.00, id: 5);
-    Sides sides6 = Sides(title: 'onione range', price: 1.00, id: 6);
-    listSides.add(sides1);
-    listSides.add(sides2);
-    listSides.add(sides3);
-    listSides.add(sides4);
-    listSides.add(sides5);
-    listSides.add(sides6);
-    return listSides;
-  }
 }
